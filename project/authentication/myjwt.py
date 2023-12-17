@@ -1,48 +1,77 @@
+# utils.py
+
 import json
 import base64
-import hashlib
-import hmac
 from datetime import datetime, timedelta
+from django.conf import settings
+from .models import CustomUser
 
-SECRET_KEY = "your_secret_key"  # Replace with a strong, unique secret key
-
-
-def generate_signature(encoded_header, encoded_payload):
-    key = SECRET_KEY.encode()
-    message = (encoded_header + "." + encoded_payload).encode()
-    signature = base64.urlsafe_b64encode(hmac.new(key, message, hashlib.sha256).digest()).decode().rstrip("=")
-    return signature
+SECRET_KEY = settings.SECRET_KEY
 
 
-def verify_signature(encoded_header, encoded_payload, signature):
-    expected_signature = generate_signature(encoded_header, encoded_payload)
-    return hmac.compare_digest(expected_signature, signature)
+def base64url_encode(data):
+    encoded = base64.urlsafe_b64encode(data).rstrip(b"=")
+    return encoded.decode("utf-8")
 
 
-def encode_jwt(payload):
-    # Convert datetime to string representation
-    payload["exp"] = (datetime.utcnow() + timedelta(days=1)).isoformat()
-
-    header = {"alg": "HS256", "typ": "JWT"}
-    encoded_header = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
-    encoded_payload = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
-
-    signature = generate_signature(encoded_header, encoded_payload)
-    jwt_token = f"{encoded_header}.{encoded_payload}.{signature}"
-    return jwt_token
+def base64url_decode(data):
+    padding = b"=" * (4 - (len(data) % 4))
+    return base64.urlsafe_b64decode(data + padding)
 
 
-def decode_jwt(jwt_token):
-    encoded_header, encoded_payload, signature = jwt_token.split(".")
-    header = json.loads(base64.urlsafe_b64decode(encoded_header + "==").decode())
-    payload = json.loads(base64.urlsafe_b64decode(encoded_payload + "==").decode())
+def generate_jwt_token(user):
+    issued_at = datetime.utcnow()
+    expiration_time = issued_at + timedelta(days=1)
 
-    if verify_signature(encoded_header, encoded_payload, signature):
-        # Convert the expiration string back to datetime
-        payload["exp"] = datetime.fromisoformat(payload["exp"])
-        return payload
-    else:
-        raise ValueError("Invalid signature")
+    header = {
+        "alg": "HS256",
+        "typ": "JWT",
+    }
+
+    payload = {
+        "user_id": user.id,
+        "iat": issued_at,
+        "exp": expiration_time,
+    }
+
+    header_b64 = base64url_encode(json.dumps(header).encode("utf-8"))
+    payload_b64 = base64url_encode(json.dumps(payload).encode("utf-8"))
+
+    signature = base64url_encode(
+        settings.SECRET_KEY.encode("utf-8")
+        + ".".encode("utf-8")
+        + header_b64.encode("utf-8")
+        + ".".encode("utf-8")
+        + payload_b64.encode("utf-8")
+    )
+
+    return f"{header_b64}.{payload_b64}.{signature}"
 
 
-# Rest of your code...
+def verify_jwt_token(token):
+    try:
+        header_b64, payload_b64, signature = token.split(".")
+        header = json.loads(base64url_decode(header_b64).decode("utf-8"))
+        payload = json.loads(base64url_decode(payload_b64).decode("utf-8"))
+
+        # Validate the signature (optional but recommended)
+        expected_signature = base64url_encode(
+            settings.SECRET_KEY.encode("utf-8")
+            + ".".encode("utf-8")
+            + header_b64.encode("utf-8")
+            + ".".encode("utf-8")
+            + payload_b64.encode("utf-8")
+        )
+
+        if signature != expected_signature:
+            raise ValueError("Invalid signature")
+
+        # Validate expiration time (optional but recommended)
+        expiration_time = datetime.utcfromtimestamp(payload["exp"])
+        if datetime.utcnow() > expiration_time:
+            raise ValueError("Token has expired")
+
+        return payload["user_id"]
+
+    except Exception as e:
+        raise ValueError("Invalid token") from e
