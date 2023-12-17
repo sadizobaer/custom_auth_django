@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 
 
-class CustomUserManager(BaseUserManager):
+class CustomUserManager(models.Model):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
@@ -37,7 +37,7 @@ class CustomUserManager(BaseUserManager):
 #         return self.email
 
 
-class CustomUser(AbstractBaseUser):
+class CustomUser(modles.Model):
     # ... other fields ...
     idName = models.AutoField(primary_key=True, unique=True)
     email = models.EmailField(unique=True)
@@ -45,11 +45,6 @@ class CustomUser(AbstractBaseUser):
     profilePicUrl = models.URLField()
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["phoneNumber", "profilePicUrl"]
 
     def __str__(self):
         return self.email
