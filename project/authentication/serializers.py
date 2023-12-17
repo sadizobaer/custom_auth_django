@@ -8,7 +8,7 @@ from .jwt_util import generate_jwt_token, verify_jwt_token, custom_authenticate
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ("id", "email", "idname", "phonenumber", "profilepic", "password")
+        fields = ("id", "email", "idname", "phonenumber", "password")
         extra_kwargs = {"password": {"write_only": True}}
 
 

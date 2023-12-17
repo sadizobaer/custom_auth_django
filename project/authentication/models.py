@@ -9,8 +9,7 @@ class CustomUser(models.Model):
     email = models.EmailField(unique=True)
     idname = models.CharField(max_length=50, unique=True)
     phonenumber = models.CharField(max_length=15, blank=True, null=True)
-    profilepic = models.ImageField(upload_to="profile_pics/", blank=True, null=True)
-    password = models.CharField(max_length=128)  # Store the hashed password
+    password = models.CharField(max_length=128)  # Store the hashed passwords
 
     def create_user(email, idname, password):
         user = CustomUser(email=email, idname=idname, password=password)

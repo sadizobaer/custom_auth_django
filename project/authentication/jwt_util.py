@@ -22,6 +22,4 @@ def verify_jwt_token(token):
 
 def custom_authenticate(email, password):
     user = authenticate(email=email, password=password)
-    if user and user.is_active:
-        return user
     return None
