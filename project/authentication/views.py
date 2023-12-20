@@ -1,59 +1,40 @@
-from django.contrib.auth import authenticate
-from rest_framework import generics, permissions, status
+from django.contrib.auth.hashers import check_password
+from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import CustomUser
-from .serializers import (
-    CustomUserSerializer,
-    ObtainTokenPairSerializer,
-    RefreshTokenSerializer,
-)
-from .jwt_util import generate_jwt_token, verify_jwt_token
+from .serializers import CustomUserSerializer
+from .myjwt import generate_jwt_token
 
 
 class RegisterUserView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
-    permission_classes = (permissions.AllowAny,)
-
-
-class ObtainTokenPairView(generics.CreateAPIView):
-    serializer_class = ObtainTokenPairSerializer
-    permission_classes = (permissions.AllowAny,)
-
     def post(self, request, *args, **kwargs):
-        email = request.data.get("email")
-        password = request.data.get("password")
-        user = authenticate(request, email=email, password=password)
-
-        if user:
-            token = generate_jwt_token(user)  # Your custom JWT creation logic
-            return Response({"token": token}, status=status.HTTP_200_OK)
+        serializer = CustomUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {"message": "User registered successfully!", "user_id": user.id},
+                status=status.HTTP_200_OK,
+            )
         else:
             return Response(
-                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+                {"error": "Invalid credentials"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
-class RefreshTokenView(generics.CreateAPIView):
-    serializer_class = RefreshTokenSerializer
-    permission_classes = (permissions.AllowAny,)
-
+class LoginUserView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        refresh_token = serializer.validated_data["refresh"]
-
-        try:
-            user_id = verify_jwt_token(
-                refresh_token
-            )  # Your custom JWT verification logic
-            # Additional logic if needed with the user_id
-        except Exception as e:
+        email = request.data["email"]
+        password = request.data["password"]
+        user = CustomUser.objects.get(email=email)
+        if check_password(password, user.password):
+            token = generate_jwt_token(user)
             return Response(
-                {"error": "Invalid refresh token"},
+                {"message": "User logged in successfully!", "token": token},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"error": "Invalid credentials"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-
-        # Your custom logic for token refreshing
-
-        return Response({"success": "Token refreshed"}, status=status.HTTP_200_OK)

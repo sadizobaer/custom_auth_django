@@ -4,7 +4,6 @@ import json
 import base64
 from datetime import datetime, timedelta
 from django.conf import settings
-from .models import CustomUser
 
 SECRET_KEY = settings.SECRET_KEY
 
@@ -23,6 +22,8 @@ def generate_jwt_token(user):
     issued_at = datetime.utcnow()
     expiration_time = issued_at + timedelta(days=1)
 
+    expiration_timestamp = int(expiration_time.timestamp())
+
     header = {
         "alg": "HS256",
         "typ": "JWT",
@@ -30,8 +31,8 @@ def generate_jwt_token(user):
 
     payload = {
         "user_id": user.id,
-        "iat": issued_at,
-        "exp": expiration_time,
+        "iat": int(issued_at.timestamp()),
+        "exp": expiration_timestamp,
     }
 
     header_b64 = base64url_encode(json.dumps(header).encode("utf-8"))
