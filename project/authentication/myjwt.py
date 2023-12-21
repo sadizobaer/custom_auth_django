@@ -17,6 +17,9 @@ def generate_jwt_token(user, token_type="access"):
     }
     payload = {
         "user_id": user.id,
+        "id_name": user.id_name,
+        "email": user.email,
+        "phonenumber": user.phonenumber,
         "iat": int(issued_at.timestamp()),
         "exp": expiration_timestamp,
         "token_type": token_type,
@@ -45,23 +48,22 @@ def base64url_decode(data):
 
 
 def verify_jwt_token(token):
-    try:
-        header_b64, payload_b64, signature = token.split(".")
-        header = json.loads(base64url_decode(header_b64).decode("utf-8"))
-        payload = json.loads(base64url_decode(payload_b64).decode("utf-8"))
-        message = f"{header_b64}.{payload_b64}".encode("utf-8")
-        secret = settings.SECRET_KEY.encode("utf-8")
-        hash = hmac.new(secret, message, hashlib.sha256)
-        expected_signature = base64url_encode(hash.digest())
+    header_b64, payload_b64, signature = token.split(".")
+    header = json.loads(base64url_decode(header_b64).decode("utf-8"))
+    payload = json.loads(base64url_decode(payload_b64).decode("utf-8"))
+    message = f"{header_b64}.{payload_b64}".encode("utf-8")
+    secret = settings.SECRET_KEY.encode("utf-8")
+    hash = hmac.new(secret, message, hashlib.sha256)
+    expected_signature = base64url_encode(hash.digest())
 
-        if signature != expected_signature:
-            raise ValueError("Invalid signature")
+    if signature != expected_signature:
+        raise ValueError("Invalid token")
 
-        expiration_time = datetime.utcfromtimestamp(payload["exp"])
-        if datetime.utcnow() > expiration_time:
-            raise ValueError("Token has expired")
+    expiration_time = datetime.utcfromtimestamp(payload["exp"])
+    if datetime.utcnow() > expiration_time:
+        raise ValueError("Token has expired")
 
-        return payload["user_id"]
-    except Exception as e:
-        print(f"Error: {e}")
-        raise ValueError("Invalid token") from e
+    if "token_type" in payload and payload["token_type"] != "refresh":
+        raise ValueError("Access tokens are not allowed for this operation")
+
+    return payload["user_id"]

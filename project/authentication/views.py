@@ -12,12 +12,18 @@ class RegisterUserView(generics.CreateAPIView):
         if serializer.is_valid():
             user = serializer.save()
             return Response(
-                {"message": "User registered successfully!", "user_id": user.id},
+                {
+                    "user_id": user.id,
+                    "email": user.email,
+                    "message": "User registered successfully!",
+                },
                 status=status.HTTP_200_OK,
             )
         else:
             return Response(
-                {"error": "Invalid credentials"},
+                {
+                    "error": "Invalid credentials",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -40,7 +46,9 @@ class LoginUserView(generics.CreateAPIView):
             )
         else:
             return Response(
-                {"error": "Invalid credentials"},
+                {
+                    "error": "Invalid credentials",
+                },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -51,7 +59,9 @@ class RefreshTokenView(generics.CreateAPIView):
 
         if not refresh_token:
             return Response(
-                {"error": "Refresh token not provided."},
+                {
+                    "error": "Refresh token not provided.",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -71,6 +81,10 @@ class RefreshTokenView(generics.CreateAPIView):
 
         except ValueError as e:
             return Response(
-                {"error": str(e)},
+                {
+                    "message": str(e),
+                    "access_token": "",
+                    "refresh_token": "",
+                },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
