@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import CustomUser
 from .serializers import CustomUserSerializer
 from .myjwt import generate_jwt_token, verify_jwt_token
+from rest_framework.views import APIView
 
 
 class RegisterUserView(generics.CreateAPIView):
